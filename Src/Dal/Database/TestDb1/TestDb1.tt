@@ -1,0 +1,65 @@
+<#@ template language="C#" hostspecific="True" debug="true" #>
+<#@ assembly name="System.Core" #>
+<#@ assembly name="System.Linq" #>
+<#@	assembly name="$(TargetDir)Model.dll" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="System.Reflection" #>
+<#@ output extension="T4.cs" encoding="utf-8" #>
+<#
+var DbName="TestDb1";
+#>
+using Model.Entitys.<#=DbName#>;
+using Dal.Base;
+namespace Dal.Database
+{
+	using Dal.Database.DAL.<#=DbName#>;
+
+	public partial class <#=DbName#>
+    {
+	//表
+<#
+	var basetable=typeof(Model.HasId);
+	var ass= Assembly.GetAssembly(basetable);
+    var tables=System.Reflection.Assembly
+		.GetAssembly(typeof(Model.HasId))
+		.GetTypes()
+		.Where(m =>
+			m.BaseType!=null
+			&&m.BaseType.FullName!=null
+			&& m.BaseType.FullName.StartsWith("Model.HasId")
+			&&m.FullName.Contains("."+DbName+"."))
+		.OrderBy(m => m.Name);
+    foreach (var item in tables)
+    {
+#> 
+        private <#= item.Name #>Dal _<#= item.Name #>Dal;
+        /// <summary>
+        /// <#= item.CustomAttributes.First(m=>m.AttributeType==typeof(Model.RemarkAttribute)).ConstructorArguments.First().Value#>
+        /// </summary>
+        public <#= item.Name #>Dal <#= item.Name #>
+        {
+            get { return _<#= item.Name #>Dal ?? (_<#= item.Name #>Dal = new <#= item.Name #>Dal(DbName)); }
+        } 
+<#
+    }
+#>
+	}
+}
+namespace Dal.Database.DAL.<#=DbName#>
+{
+
+#pragma warning disable CS1591 // 缺少对公共可见类型或成员的 XML 注释
+<#
+	foreach (var item in tables)
+    {
+#>
+	public partial class <#= item.Name #>Dal : CommandBase<<#= item.Name #>> { public <#= item.Name #>Dal(string db) : base(db) { } } 
+
+<#
+    }
+#>
+
+#pragma warning restore CS1591 // 缺少对公共可见类型或成员的 XML 注释
+
+}
